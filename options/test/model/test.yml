@@ -1,0 +1,65 @@
+# general settings
+name: FLGNet
+model_type: FLGNet_test
+num_gpu: 1  # set num_gpu: 0 for cpu mode
+manual_seed: 10
+
+# dataset and data loader settings
+datasets:
+  test:
+    name: LOL
+    type: PairedImageDataset
+
+#    dataroot_gt: datasets/DICM
+#    dataroot_lq: datasets/DICM
+#    dataroot_gt: datasets/track
+#    dataroot_lq: datasets/track
+#    dataroot_gt: datasets/LIME
+#    dataroot_lq: datasets/LIME
+#    dataroot_gt: datasets/LOLtr/high
+#    dataroot_lq: datasets/LOLtr/low
+#    dataroot_gt: datasets/LOL/Train/high
+#    dataroot_lq: datasets/LOL/Train/low
+#    dataroot_gt: datasets/LOL_syn/Test/high
+#    dataroot_lq: datasets/LOL_syn/Test/low
+    dataroot_gt: datasets/real
+    dataroot_lq: datasets/real
+
+#    dataroot_gt: datasets/LOL2/Test/high
+#    dataroot_lq: datasets/LOL2/Test/low
+#    dataroot_gt: datasets/SICE/high
+#    dataroot_lq: datasets/SICE/low
+#    dataroot_gt: datasets/LIME
+#    dataroot_lq: datasets/LIME
+#    dataroot_gt: datasets/S_c/high
+#    dataroot_lq: datasets/S_c/low
+#    dataroot_gt: datasets/unpair2
+#    dataroot_lq: datasets/unpair2
+    io_backend:
+      type: disk
+
+# network structures
+network_g:
+  type: FLGNet
+  nrb_low: 5
+  nrb_high: 3
+  num_high: 3
+
+# path
+path:
+  pretrain_network_g: \\experiments\\lol1.pth
+  strict_load_g: false
+
+val:
+  save_img: true
+  suffix: ~  # add suffix to saved images, if None, use exp name
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false

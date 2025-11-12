@@ -1,0 +1,139 @@
+# general settings
+
+#假设你有 4 台机器，每台机器上有 8 个 GPU，每个进程（GPU）使用 4 个数据加载线程（workers）：
+#num_gpu：每台机器上 num_gpu = 8。
+#world_size：总进程数为 4 * 8 = 32，即 world_size = 32。
+#rank：
+#第一台机器的 rank 范围是 [0, 7]。
+#第二台机器的 rank 范围是 [8, 15]。
+#第三台机器的 rank 范围是 [16, 23]。
+#第四台机器的 rank 范围是 [24, 31]。
+#workers：每个进程（GPU）使用 4 个数据加载线程。
+
+name: FLGNet
+model_type: FLGNet
+num_gpu: 1  # set num_gpu: 0 for cpu mode
+manual_seed: 10
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: LOL
+    type: UnPairedImageDataset
+
+    dataroot_gt: datasets/LOL/Train/high
+    dataroot_lq: datasets/LOL/Train/low
+
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+#       type: lmdb
+
+    if_fix_size: true # training will be slower if the data shape not fixed (both num_gpu and batch_size need to be 1)
+    gt_size: 256 # training size
+    use_flip: true
+    use_rot: true
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 0
+    batch_size_per_gpu: 4
+    dataset_enlarge_ratio: 10
+    prefetch_mode: cuda
+    pin_memory: true
+
+  val:
+    name: LOL_val
+    type: PairedImageDataset
+
+    dataroot_gt: /datasets/LOL/Test/high
+    dataroot_lq: /datasets/LOL/Test/low
+
+    io_backend:
+      type: disk
+#      type: lmdb
+
+
+# network structures
+network_g:
+  type: FLGNet
+  nrb_low: 5
+  nrb_high: 3
+  num_high: 3
+
+network_d:
+  type: Discriminator
+
+# path
+path:
+  pretrain_network_g: ~
+  strict_load_g: false
+  resume_state: ~
+
+# training settings
+train:
+  optim_g:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [ 0.9, 0.99 ]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [50000, 100000, 200000, 300000]
+    gamma: 0.5
+
+  total_iter: 300000             # 4850张图片，批次4  每epoch迭代4850/4=1213次      需要训练 300000/1213=248 epoch
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: MSELoss
+    loss_weight: 1000
+    reduction: mean
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights: {'conv1_2': 1, 'conv2_2': 1, 'conv3_4': 1, 'conv4_4': 1}
+    criterion: mse
+    perceptual_weight: 100
+  gan_opt:
+    type: GANLoss
+    gan_type: standard
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: 1
+  gp_opt:
+    loss_weight: 100
+
+  net_d_iters: 1
+  net_d_init_iters: 0
+
+# validation settings
+val:
+  val_freq: !!float 2e4           # 每 20000iter计算验证一次
+  save_img: true
+
+  metrics:
+    psnr:
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+
+# logging settings
+logger:
+  print_freq: 100                     # 每 100iter打印一次结果
+  save_checkpoint_freq: !!float 5e2   # 每5000iter保存一次模型
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
